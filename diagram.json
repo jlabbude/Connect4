@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-arduino-uno",
+      "id": "uno",
+      "top": 0.6,
+      "left": -125.4,
+      "rotate": 180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-analog-joystick",
+      "id": "joystick1",
+      "top": -10.2,
+      "left": -330.6,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-analog-joystick",
+      "id": "joystick2",
+      "top": -250.2,
+      "left": -263.4,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [ "joystick2:VCC", "uno:5V", "red", [ "v19.2", "h286.2" ] ],
+    [ "joystick1:VCC", "uno:3.3V", "red", [ "v9.6", "h-57.6", "v-220.8", "h353.8" ] ],
+    [ "joystick2:VERT", "uno:A0", "green", [ "v38.4", "h240" ] ],
+    [ "joystick2:HORZ", "uno:A1", "green", [ "v48", "h220.8" ] ],
+    [ "joystick2:GND", "uno:GND.2", "black", [ "v9.6", "h240" ] ],
+    [ "joystick2:SEL", "uno:3", "green", [ "v345.6", "h113.7" ] ],
+    [ "joystick1:SEL", "uno:5", "green", [ "v115.2", "h201.6" ] ],
+    [ "joystick1:VERT", "uno:A2", "green", [ "v19.2", "h105.6", "v-192", "h104" ] ],
+    [ "joystick1:HORZ", "uno:A3", "green", [ "v9.6", "h86.4", "v-192", "h104.1" ] ],
+    [ "joystick1:GND", "uno:GND.3", "black", [ "v28.8", "h86.4", "v-192", "h142.4" ] ]
+  ],
+  "dependencies": {}
+}
