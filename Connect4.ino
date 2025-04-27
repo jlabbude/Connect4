@@ -26,52 +26,77 @@ ThreadController controller = ThreadController();
 Thread rightJoystickThread = Thread();
 Thread leftJoystickThread = Thread();
 
-void win_animation(PType winner)
-{
+void LEDs::win_animation(PType winner) {
+    CRGB saved_state[NUM_LEDS];
+    for (int i = 0; i < NUM_LEDS; i++) {
+        saved_state[i] = crgb_leds[i];
+    }
+    
     CRGB winner_color = ptype_to_CRGB(winner);
-
-    // Flash the entire board 5 times with the winner's color
-    for (int flash = 0; flash < 5; flash++)
-    {
-        // Turn all LEDs to winner's color
-        for (int i = 0; i < NUM_LEDS; i++)
-        {
+    
+    for (int flash = 0; flash < 5; flash++) {
+        for (int i = 0; i < NUM_LEDS; i++) {
             crgb_leds[i] = winner_color;
         }
         FastLED.show();
         delay(300);
-
-        // Turn all LEDs off (black)
-        for (int i = 0; i < NUM_LEDS; i++)
-        {
+        
+        for (int i = 0; i < NUM_LEDS; i++) {
             crgb_leds[i] = CRGB::Black;
         }
         FastLED.show();
         delay(300);
     }
-
-    // Spiral animation from the center outward
-    int center = COLUM_LINE / 2;
-    for (int radius = 1; radius <= COLUM_LINE; radius++)
-    {
-        for (int x = center - radius; x <= center + radius; x++)
-        {
-            for (int y = center - radius; y <= center + radius; y++)
-            {
-                // Check if position is at the edge of current radius and within bounds
-                if ((x == center - radius || x == center + radius ||
-                     y == center - radius || y == center + radius) &&
-                    x >= 0 && x < COLUM_LINE && y >= 0 && y < COLUM_LINE)
-                {
-                    crgb_leds[y * COLUM_LINE + x] = winner_color;
-                }
-            }
-        }
-        FastLED.show();
-        delay(150);
+    
+    int center_start = 3;
+    int center_end = 4;
+    
+    for (int i = 0; i < NUM_LEDS; i++) {
+        crgb_leds[i] = CRGB::Black;
     }
-
+    
+    for (int x = center_start; x <= center_end; x++) {
+        for (int y = center_start; y <= center_end; y++) {
+            crgb_leds[y * COLUM_LINE + x] = winner_color;
+        }
+    }
+    FastLED.show();
+    delay(300);
+    
+    for (int radius = 1; radius <= 4; radius++) {
+        int min_x = center_start - radius;
+        int max_x = center_end + radius;
+        int min_y = center_start - radius;
+        int max_y = center_end + radius;
+        
+        min_x = max(min_x, 0);
+        max_x = min(max_x, COLUM_LINE - 1);
+        min_y = max(min_y, 0);
+        max_y = min(max_y, COLUM_LINE - 1);
+        
+        for (int x = min_x; x <= max_x; x++) {
+            if (min_y >= 0)
+                crgb_leds[min_y * COLUM_LINE + x] = winner_color;
+            if (max_y < COLUM_LINE)
+                crgb_leds[max_y * COLUM_LINE + x] = winner_color;
+        }
+        
+        for (int y = min_y + 1; y < max_y; y++) {
+            if (min_x >= 0)
+                crgb_leds[y * COLUM_LINE + min_x] = winner_color;
+            if (max_x < COLUM_LINE)
+                crgb_leds[y * COLUM_LINE + max_x] = winner_color;
+        }
+        
+        FastLED.show();
+        delay(200);
+    }
+    
     delay(1000);
+    
+    for (int i = 0; i < NUM_LEDS; i++) {
+        crgb_leds[i] = saved_state[i];
+    }
     FastLED.show();
 }
 
