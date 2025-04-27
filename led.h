@@ -64,7 +64,8 @@ public:
     void gravity();
     void lop();
     bool check_win();
-    CRGB &XY(int x, int y);
+    CRGB &cursor_YX_coords(int x, int y);
+    bool win_condition();
     JoyStick *next_play(JoyStick *current);
 };
 
