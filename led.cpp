@@ -2,6 +2,8 @@
 #include "joystick.h"
 #include <FastLED.h>
 
+CRGB crgb_leds[NUM_LEDS];
+
 CRGB ptype_to_CRGB(PType type)
 {
     switch (type)
@@ -13,49 +15,48 @@ CRGB ptype_to_CRGB(PType type)
     }
 }
 
-LEDs::LEDs(CRGB (*_leds)[COLUM_LINE], Cell (*_cells)[COLUM_LINE])
-{
-    leds = _leds;
-    cells = _cells;
-}
-
 void LEDs::setup_leds()
 {
-    for (int i = 0; i < COLUM_LINE; i++)
-    {
-        FastLED.addLeds<WS2812, LED_PIN, RGB>(leds[i], NUM_LEDS);
-    }
-
+    int idx = 0;
     for (int column = 0; column < COLUM_LINE; column++)
     {
         for (int line = 0; line < COLUM_LINE; line++)
         {
-            cells[column][line] = (Cell){CellState::Empty(), column, line};
-            leds[column][line] = CRGB::White;
+            cells[column][line] = {CellState::Empty(), column, line};
+            crgb_leds[idx++] = CRGB::White;
         }
     }
-    FastLED.setBrightness(50);
-    FastLED.show();
 }
 
-void LEDs::handle_movement(JoyStick stick)
+void LEDs::handle_movement(StickStatus movement)
 {
-    player = stick.to_ptype();
-    switch (stick.handle_movements())
+    switch (movement)
     {
     case StickStatus::PositiveMovement:
-        (cursor.column == 7) ? cursor.column = 0 : cursor.column++;
+        if (cursor.column == 7)
+        {
+            XY(7, cursor.line) = CRGB::White;
+            cursor.column = 0;
+            break;
+        }
+        XY(cursor.column, cursor.line) = CRGB::White;
+        cursor.column++;
         break;
     case StickStatus::NegativeMovement:
-        (cursor.column == 0) ? cursor.column = 7 : cursor.column--;
+        if (cursor.column == 0)
+        {
+            XY(0, cursor.line) = CRGB::White;
+            cursor.column = 7;
+            break;
+        }
+        XY(cursor.column, cursor.line) = CRGB::White;
+        cursor.column--;
         break;
     case StickStatus::StaticMovement:
         break;
     case StickStatus::Click:
         if (cells[cursor.column][cursor.line].state.state == __CellState::EMPTY)
-        {
             gravity();
-        }
         return;
     }
     move_cursor();
@@ -63,25 +64,12 @@ void LEDs::handle_movement(JoyStick stick)
 
 void LEDs::move_cursor()
 {
-    leds[cursor.column][cursor.line] = ptype_to_CRGB(player);
-    FastLED.show();
+    XY(cursor.column, cursor.line) = ptype_to_CRGB(player);
 }
 
-void LEDs::gravity()
+CRGB &LEDs::XY(int x, int y)
 {
-    for (; cursor.line < COLUM_LINE; cursor.line++)
-    {
-        if (cells[cursor.column][cursor.line].state.state == __CellState::EMPTY)
-        {
-            move_cursor();
-            if (cursor.line + 1 > 8 || cells[cursor.column][cursor.line + 1].state.state != __CellState::EMPTY)
-            {
-                cells[cursor.column][cursor.line].state = CellState::Occupied(player);
-                break;
-                return;
-            }
-        }
-    }
+    return crgb_leds[y * COLUM_LINE + x];
 }
 
 void LEDs::lop()

@@ -1,12 +1,14 @@
 #ifndef LED_H
 #define LED_H
 
-#define NUM_LEDS 60
+#define NUM_LEDS 64
 #define COLUM_LINE 8
 #define LED_PIN 6
 
 #include "common.h"
 #include <FastLED.h>
+
+extern CRGB crgb_leds[NUM_LEDS];
 
 class JoyStick;
 
@@ -51,18 +53,19 @@ typedef struct Cell
 
 class LEDs
 {
-    CRGB(*leds)[COLUM_LINE];
-    Cell (*cells)[COLUM_LINE];
+    Cell cells[COLUM_LINE][COLUM_LINE];
     Cell cursor = (Cell){CellState::Occupied(PType::Red), 0, 0};
     PType player = PType::Red;
 
 public:
-    LEDs(CRGB (*_leds)[COLUM_LINE], Cell (*_cells)[COLUM_LINE]);
     void setup_leds();
-    void handle_movement(JoyStick stick);
+    void handle_movement(StickStatus movement);
     void move_cursor();
     void gravity();
     void lop();
+    bool check_win();
+    CRGB &XY(int x, int y);
+    JoyStick *next_play(JoyStick *current);
 };
 
 #endif
