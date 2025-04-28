@@ -66,7 +66,7 @@ public:
     bool check_win();
     CRGB &cursor_YX_coords(int x, int y);
     bool win_condition();
-    JoyStick *next_play(JoyStick *current);
+    void next_play(JoyStick &current);
 };
 
 #endif

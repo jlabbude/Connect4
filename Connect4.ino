@@ -1,6 +1,3 @@
-#include <StaticThreadController.h>
-#include <Thread.h>
-#include <ThreadController.h>
 #include <FastLED.h>
 #include "joystick.h"
 #include "led.h"
@@ -16,88 +13,79 @@
 #define LED_COUNT 64
 #define LED_PIN 4
 
-JoyStick joystick_right(RIGHT_X, RIGHT_Y, RIGHT_BUTTON, JoyStickPType::Right);
-JoyStick joystick_left(LEFT_X, LEFT_Y, LEFT_BUTTON, JoyStickPType::Left);
-JoyStick *current = &joystick_right;
+#define RIGHT JoyStick(RIGHT_X, RIGHT_Y, RIGHT_BUTTON, JoyStickPType::Right)
+#define LEFT JoyStick(LEFT_X, LEFT_Y, LEFT_BUTTON, JoyStickPType::Left)
 
-LEDs leds;
-
-ThreadController controller = ThreadController();
-Thread rightJoystickThread = Thread();
-Thread leftJoystickThread = Thread();
-
-void LEDs::win_animation(PType winner) {
-    CRGB saved_state[NUM_LEDS];
-    for (int i = 0; i < NUM_LEDS; i++) {
-        saved_state[i] = crgb_leds[i];
-    }
-    
-    CRGB winner_color = ptype_to_CRGB(winner);
-    
-    for (int flash = 0; flash < 5; flash++) {
-        for (int i = 0; i < NUM_LEDS; i++) {
+void win_animation(CRGB winner_color)
+{
+    for (int flash = 0; flash < 5; flash++)
+    {
+        for (int i = 0; i < NUM_LEDS; i++)
+        {
             crgb_leds[i] = winner_color;
         }
         FastLED.show();
         delay(300);
-        
-        for (int i = 0; i < NUM_LEDS; i++) {
+
+        for (int i = 0; i < NUM_LEDS; i++)
+        {
             crgb_leds[i] = CRGB::Black;
         }
         FastLED.show();
         delay(300);
     }
-    
+
     int center_start = 3;
     int center_end = 4;
-    
-    for (int i = 0; i < NUM_LEDS; i++) {
+
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
         crgb_leds[i] = CRGB::Black;
     }
-    
-    for (int x = center_start; x <= center_end; x++) {
-        for (int y = center_start; y <= center_end; y++) {
+
+    for (int x = center_start; x <= center_end; x++)
+    {
+        for (int y = center_start; y <= center_end; y++)
+        {
             crgb_leds[y * COLUM_LINE + x] = winner_color;
         }
     }
     FastLED.show();
     delay(300);
-    
-    for (int radius = 1; radius <= 4; radius++) {
+
+    for (int radius = 1; radius <= 4; radius++)
+    {
         int min_x = center_start - radius;
         int max_x = center_end + radius;
         int min_y = center_start - radius;
         int max_y = center_end + radius;
-        
+
         min_x = max(min_x, 0);
         max_x = min(max_x, COLUM_LINE - 1);
         min_y = max(min_y, 0);
         max_y = min(max_y, COLUM_LINE - 1);
-        
-        for (int x = min_x; x <= max_x; x++) {
+
+        for (int x = min_x; x <= max_x; x++)
+        {
             if (min_y >= 0)
                 crgb_leds[min_y * COLUM_LINE + x] = winner_color;
             if (max_y < COLUM_LINE)
                 crgb_leds[max_y * COLUM_LINE + x] = winner_color;
         }
-        
-        for (int y = min_y + 1; y < max_y; y++) {
+
+        for (int y = min_y + 1; y < max_y; y++)
+        {
             if (min_x >= 0)
                 crgb_leds[y * COLUM_LINE + min_x] = winner_color;
             if (max_x < COLUM_LINE)
                 crgb_leds[y * COLUM_LINE + max_x] = winner_color;
         }
-        
+
         FastLED.show();
         delay(200);
     }
-    
+
     delay(1000);
-    
-    for (int i = 0; i < NUM_LEDS; i++) {
-        crgb_leds[i] = saved_state[i];
-    }
-    FastLED.show();
 }
 
 void LEDs::gravity()
@@ -119,45 +107,50 @@ void LEDs::gravity()
     }
 }
 
-JoyStick *LEDs::next_play(JoyStick *current)
+void LEDs::next_play(JoyStick &current)
 {
-    JoyStick *next_player;
-    (current->type == JoyStickPType::Right) ? next_player = &joystick_left : next_player = &joystick_right;
-    PType next_player_ptype = next_player->to_ptype();
-    cursor = {CellState::Occupied(next_player_ptype), 0, 0};
-    player = next_player_ptype;
+    // fixme: might not be ideal - might just convert each field manually in a switch_player method
+    (current.type == JoyStickPType::Right) ? current = LEFT : current = RIGHT;
+    player = current.to_ptype();
+    cursor = {CellState::Occupied(player), 0, 0};
     move_cursor();
-    return next_player;
 }
 
-void setup()
+int main()
 {
+    JoyStick current = RIGHT;
+    LEDs leds;
+
     FastLED.addLeds<WS2812, LED_PIN, GRB>(crgb_leds, NUM_LEDS);
     FastLED.setBrightness(1);
-
     leds.setup_leds();
     FastLED.show();
 
+    JoyStick joystick_right(RIGHT_X, RIGHT_Y, RIGHT_BUTTON, JoyStickPType::Right);
+    JoyStick joystick_left(LEFT_X, LEFT_Y, LEFT_BUTTON, JoyStickPType::Left);
     joystick_right.setup_joystick();
     joystick_left.setup_joystick();
 
     Serial.begin(9600);
-}
 
-void loop()
-{
-    StickStatus movement = current->handle_movements();
-    leds.handle_movement(movement);
-    FastLED.show();
-    if (movement == StickStatus::Click)
+    while (1)
     {
-        leds.gravity();
-        if (leds.win_condition()) {
-            win_animation(current->to_ptype());
-            leds.setup_leds();
-            FastLED.show();
+        StickStatus movement = current.handle_movements();
+        leds.handle_movement(movement);
+        FastLED.show();
+        if (movement == StickStatus::Click)
+        {
+            leds.gravity();
+            if (leds.win_condition())
+            {
+                win_animation(ptype_to_CRGB(current.to_ptype()));
+                leds.setup_leds();
+                FastLED.show();
+            }
+            leds.next_play(current);
         }
-        current = leds.next_play(current);
+        delay(200);
     }
-    delay(200);
+
+    return 0;
 }
