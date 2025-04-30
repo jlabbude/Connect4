@@ -62,11 +62,9 @@ public:
     void handle_movement(StickStatus movement);
     void move_cursor();
     void gravity();
-    void lop();
-    bool check_win();
     CRGB &cursor_YX_coords(int x, int y);
     bool win_condition();
-    void next_play(JoyStick &current);
+    JoyStick *next_play(JoyStick *current);
 };
 
 #endif

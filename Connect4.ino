@@ -1,3 +1,6 @@
+#include <StaticThreadController.h>
+#include <Thread.h>
+#include <ThreadController.h>
 #include <FastLED.h>
 #include "joystick.h"
 #include "led.h"
@@ -13,8 +16,15 @@
 #define LED_COUNT 64
 #define LED_PIN 4
 
-#define RIGHT JoyStick(RIGHT_X, RIGHT_Y, RIGHT_BUTTON, JoyStickPType::Right)
-#define LEFT JoyStick(LEFT_X, LEFT_Y, LEFT_BUTTON, JoyStickPType::Left)
+JoyStick joystick_right(RIGHT_X, RIGHT_Y, RIGHT_BUTTON, JoyStickPType::Right);
+JoyStick joystick_left(LEFT_X, LEFT_Y, LEFT_BUTTON, JoyStickPType::Left);
+JoyStick *current = &joystick_right;
+
+LEDs leds;
+
+ThreadController controller = ThreadController();
+Thread rightJoystickThread = Thread();
+Thread leftJoystickThread = Thread();
 
 void win_animation(CRGB winner_color)
 {
@@ -107,50 +117,45 @@ void LEDs::gravity()
     }
 }
 
-void LEDs::next_play(JoyStick &current)
+JoyStick *LEDs::next_play(JoyStick *current)
 {
-    // fixme: might not be ideal - might just convert each field manually in a switch_player method
-    (current.type == JoyStickPType::Right) ? current = LEFT : current = RIGHT;
-    player = current.to_ptype();
-    cursor = {CellState::Occupied(player), 0, 0};
+    JoyStick *next_player;
+    (current->type == JoyStickPType::Right) ? next_player = &joystick_left : next_player = &joystick_right;
+    PType next_player_ptype = next_player->to_ptype();
+    cursor = {CellState::Occupied(next_player_ptype), 0, 0};
+    player = next_player_ptype;
     move_cursor();
+    return next_player;
 }
 
-int main()
+void setup()
 {
-    JoyStick current = RIGHT;
-    LEDs leds;
-
     FastLED.addLeds<WS2812, LED_PIN, GRB>(crgb_leds, NUM_LEDS);
     FastLED.setBrightness(1);
+
     leds.setup_leds();
     FastLED.show();
 
-    JoyStick joystick_right(RIGHT_X, RIGHT_Y, RIGHT_BUTTON, JoyStickPType::Right);
-    JoyStick joystick_left(LEFT_X, LEFT_Y, LEFT_BUTTON, JoyStickPType::Left);
     joystick_right.setup_joystick();
     joystick_left.setup_joystick();
 
     Serial.begin(9600);
+}
 
-    while (1)
+void loop()
+{
+    StickStatus movement = current->handle_movements();
+    leds.handle_movement(movement);
+    FastLED.show();
+    if (movement == StickStatus::Click)
     {
-        StickStatus movement = current.handle_movements();
-        leds.handle_movement(movement);
-        FastLED.show();
-        if (movement == StickStatus::Click)
-        {
-            leds.gravity();
-            if (leds.win_condition())
-            {
-                win_animation(ptype_to_CRGB(current.to_ptype()));
-                leds.setup_leds();
-                FastLED.show();
-            }
-            leds.next_play(current);
+        leds.gravity();
+        if (leds.win_condition()) {
+            win_animation(ptype_to_CRGB(current->to_ptype()));
+            leds.setup_leds();
+            FastLED.show();
         }
-        delay(200);
+        current = leds.next_play(current);
     }
-
-    return 0;
+    delay(200);
 }
